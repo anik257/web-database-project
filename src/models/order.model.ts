@@ -4,23 +4,22 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
  * TypeScript interface representing an individual order item (sub-document).
  */
 export interface IOrderItem {
-  menuItem: Types.ObjectId;
+  foodId: Types.ObjectId;
   quantity: number;
   price: number; // Snapshot of the price at the time of ordering
+  subtotal: number; // price * quantity
   notes?: string;
 }
 
 /**
  * TypeScript interface representing an Order document in MongoDB.
- * An Order references a Table and a waiter (User), and embeds an array of OrderItems.
  */
 export interface IOrder extends Document {
-  table: Types.ObjectId;
-  waiter: Types.ObjectId;
+  tableId: Types.ObjectId;
+  staffId: Types.ObjectId;
   items: IOrderItem[];
-  status: 'pending' | 'preparing' | 'served' | 'completed' | 'cancelled';
+  status: 'Pending' | 'Preparing' | 'Ready' | 'Served' | 'Paid' | 'Cancelled';
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid';
   specialInstructions?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -28,10 +27,10 @@ export interface IOrder extends Document {
 
 const OrderItemSchema: Schema = new Schema(
   {
-    menuItem: {
+    foodId: {
       type: Schema.Types.ObjectId,
       ref: 'MenuItem',
-      required: [true, 'Menu item reference is required'],
+      required: [true, 'Food item reference is required'],
     },
     quantity: {
       type: Number,
@@ -43,6 +42,11 @@ const OrderItemSchema: Schema = new Schema(
       required: [true, 'Price snapshot is required'],
       min: [0, 'Price cannot be negative'],
     },
+    subtotal: {
+      type: Number,
+      required: [true, 'Subtotal is required'],
+      min: [0, 'Subtotal cannot be negative'],
+    },
     notes: {
       type: String,
       trim: true,
@@ -50,21 +54,21 @@ const OrderItemSchema: Schema = new Schema(
     },
   },
   {
-    _id: false, // No separate _id for sub-documents
+    _id: false,
   }
 );
 
 const OrderSchema: Schema<IOrder> = new Schema(
   {
-    table: {
+    tableId: {
       type: Schema.Types.ObjectId,
       ref: 'Table',
       required: [true, 'Table reference is required'],
     },
-    waiter: {
+    staffId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'Waiter (User) reference is required'],
+      ref: 'Staff',
+      required: [true, 'Staff reference is required'],
     },
     items: {
       type: [OrderItemSchema],
@@ -76,23 +80,15 @@ const OrderSchema: Schema<IOrder> = new Schema(
     status: {
       type: String,
       enum: {
-        values: ['pending', 'preparing', 'served', 'completed', 'cancelled'],
-        message: 'Status must be one of: pending, preparing, served, completed, cancelled',
+        values: ['Pending', 'Preparing', 'Ready', 'Served', 'Paid', 'Cancelled'],
+        message: 'Status must be one of: Pending, Preparing, Ready, Served, Paid, Cancelled',
       },
-      default: 'pending',
+      default: 'Pending',
     },
     totalAmount: {
       type: Number,
       required: [true, 'Total amount is required'],
       min: [0, 'Total amount cannot be negative'],
-    },
-    paymentStatus: {
-      type: String,
-      enum: {
-        values: ['pending', 'paid'],
-        message: 'Payment status must be one of: pending, paid',
-      },
-      default: 'pending',
     },
     specialInstructions: {
       type: String,
@@ -106,11 +102,10 @@ const OrderSchema: Schema<IOrder> = new Schema(
 );
 
 // Indexes for common query patterns
-OrderSchema.index({ table: 1 });
-OrderSchema.index({ waiter: 1 });
+OrderSchema.index({ tableId: 1 });
+OrderSchema.index({ staffId: 1 });
 OrderSchema.index({ status: 1 });
-OrderSchema.index({ paymentStatus: 1 });
-OrderSchema.index({ createdAt: -1 }); // Most recent orders first
+OrderSchema.index({ createdAt: -1 });
 
 const Order = mongoose.model<IOrder>('Order', OrderSchema);
 

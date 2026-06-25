@@ -36,9 +36,9 @@ const CategorySchema: Schema<ICategory> = new Schema(
   }
 );
 
-// Index for alphabetical listing and active filtering
-CategorySchema.index({ name: 1 });
+// Index for active filtering
 CategorySchema.index({ isActive: 1 });
+
 
 const Category = mongoose.model<ICategory>('Category', CategorySchema);
 

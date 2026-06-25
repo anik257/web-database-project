@@ -1,60 +1,109 @@
-import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import User, { IUser } from '../models/user.model';
+import { verifyToken, TokenPayload } from '../utils/jwt.util';
 import { ApiError } from '../utils/api-error';
 import { asyncHandler } from './async.middleware';
 
-// Interface representing the JWT token payload structure
-export interface JwtPayload {
-  id: string;
-  role: string;
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Extends Express Request with the authenticated user document.
+ */
+export interface AuthRequest extends Request {
+  user?: IUser;
 }
 
 /**
- * Middleware to protect routes and verify JWT tokens.
+ * Supported user roles in the system.
  */
-export const protect = asyncHandler(async (req: any, _res: Response, next: NextFunction) => {
-  let token: string | undefined;
+export type UserRole = 'admin' | 'staff';
 
-  // Read header from Request
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer')) {
-    token = authHeader.split(' ')[1];
-  }
-
-  if (!token) {
-    return next(ApiError.unauthorized('Not authorized to access this route. Please log in.'));
-  }
-
-  try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret') as JwtPayload;
-
-    // Attach decoded user info to the request object (can be fetched from database once models are set up)
-    req.user = {
-      id: decoded.id,
-      role: decoded.role,
-    };
-
-    next();
-  } catch (error) {
-    return next(ApiError.unauthorized('Not authorized to access this route. Token verification failed.'));
-  }
-});
+// ─────────────────────────────────────────────────────────────
+// protect — JWT verification + user lookup
+// ─────────────────────────────────────────────────────────────
 
 /**
- * Middleware to restrict route access to specific roles.
- * Must be used after 'protect' middleware.
+ * Middleware: Verify JWT access token from the Authorization header
+ * and attach the full User document to `req.user`.
+ *
+ * Usage:
+ *   router.get('/profile', protect, controller);
  */
-export const authorize = (...roles: string[]) => {
-  return (req: any, _res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return next(ApiError.unauthorized('Authentication required to perform this action.'));
+export const protect = asyncHandler(
+  async (req: AuthRequest, _res: Response, next: NextFunction) => {
+    // 1. Extract token from "Bearer <token>" header
+    let token: string | undefined;
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer')) {
+      token = authHeader.split(' ')[1];
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!token) {
+      return next(
+        ApiError.unauthorized('Access denied. No token provided. Please log in.')
+      );
+    }
+
+    // 2. Verify and decode token
+    let decoded: TokenPayload;
+    try {
+      decoded = verifyToken(token);
+    } catch {
+      return next(
+        ApiError.unauthorized('Invalid or expired token. Please log in again.')
+      );
+    }
+
+    // 3. Fetch user from database — ensure user still exists and is active
+    const currentUser = await User.findById(decoded.id);
+
+    if (!currentUser) {
+      return next(
+        ApiError.unauthorized('The user belonging to this token no longer exists.')
+      );
+    }
+
+    if (!currentUser.isActive) {
+      return next(
+        ApiError.forbidden('Your account has been deactivated. Contact an administrator.')
+      );
+    }
+
+    // 4. Attach user to request
+    req.user = currentUser;
+    next();
+  }
+);
+
+// ─────────────────────────────────────────────────────────────
+// authorize — Role-based access control
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Middleware: Restrict access to users with one of the specified roles.
+ * Must be chained AFTER `protect`.
+ *
+ * Usage:
+ *   router.delete('/users/:id', protect, authorize('admin'), controller);
+ *   router.get('/orders', protect, authorize('admin', 'staff'), controller);
+ */
+export const authorize = (...allowedRoles: UserRole[]) => {
+  return (req: AuthRequest, _res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(
+        ApiError.unauthorized('Authentication required. Please use the protect middleware first.')
+      );
+    }
+
+    const userRole = req.user.role as UserRole;
+
+    if (!allowedRoles.includes(userRole)) {
       return next(
         ApiError.forbidden(
-          `User role '${req.user.role}' is not authorized to access this route.`
+          `Access denied. Role '${userRole}' is not authorized to perform this action. Required: ${allowedRoles.join(' or ')}.`
         )
       );
     }
@@ -62,3 +111,45 @@ export const authorize = (...roles: string[]) => {
     next();
   };
 };
+
+// ─────────────────────────────────────────────────────────────
+// Convenience role shortcuts
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Only Admin users can access.
+ *
+ * Usage:
+ *   router.post('/categories', protect, adminOnly, controller);
+ */
+export const adminOnly = authorize('admin');
+
+/**
+ * Both Admin and Staff users can access.
+ *
+ * Usage:
+ *   router.get('/orders', protect, staffAccessible, controller);
+ */
+export const staffAccessible = authorize('admin', 'staff');
+
+// ─────────────────────────────────────────────────────────────
+// Example route patterns (for reference, not executable)
+// ─────────────────────────────────────────────────────────────
+//
+// ┌───────────────────────────────────────────────────────────┐
+// │ Admin-only routes:                                       │
+// │                                                           │
+// │   router.post('/staff',   protect, adminOnly, create);    │
+// │   router.delete('/users/:id', protect, adminOnly, remove);│
+// │   router.put('/settings', protect, adminOnly, update);    │
+// ├───────────────────────────────────────────────────────────┤
+// │ Staff-accessible routes (Admin + Staff):                  │
+// │                                                           │
+// │   router.get('/orders',       protect, staffAccessible, list);   │
+// │   router.post('/orders',      protect, staffAccessible, create); │
+// │   router.put('/orders/:id',   protect, staffAccessible, update); │
+// ├───────────────────────────────────────────────────────────┤
+// │ Any authenticated user (no role check):                   │
+// │                                                           │
+// │   router.get('/profile', protect, getProfile);            │
+// └───────────────────────────────────────────────────────────┘

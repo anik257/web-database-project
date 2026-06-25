@@ -35,7 +35,7 @@ const morganMiddleware = morgan(
 app.use(morganMiddleware);
 
 // API routes
-app.use('/api/v1', apiRouter);
+app.use('/api', apiRouter);
 app.use('/api/auth', authRoutes);
 
 // Fallback route for unmatched endpoints (404 Not Found)

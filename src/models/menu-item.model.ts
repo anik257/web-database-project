@@ -9,8 +9,8 @@ export interface IMenuItem extends Document {
   description?: string;
   price: number;
   category: Types.ObjectId;
-  isAvailable: boolean;
-  imageUrl?: string;
+  availability: boolean;
+  image?: string;
   preparationTime: number; // in minutes
   createdAt: Date;
   updatedAt: Date;
@@ -40,11 +40,11 @@ const MenuItemSchema: Schema<IMenuItem> = new Schema(
       ref: 'Category',
       required: [true, 'Category is required for a menu item'],
     },
-    isAvailable: {
+    availability: {
       type: Boolean,
       default: true,
     },
-    imageUrl: {
+    image: {
       type: String,
       trim: true,
     },
@@ -62,7 +62,7 @@ const MenuItemSchema: Schema<IMenuItem> = new Schema(
 
 // Indexes for common query patterns
 MenuItemSchema.index({ category: 1 });
-MenuItemSchema.index({ isAvailable: 1 });
+MenuItemSchema.index({ availability: 1 });
 MenuItemSchema.index({ price: 1 });
 
 const MenuItem = mongoose.model<IMenuItem>('MenuItem', MenuItemSchema);
