@@ -142,23 +142,18 @@ const runTest = async () => {
 
     // 8. Generate Bill
     console.log('\nStep 6: Generating Bill for the Order...');
-    const bill = await billService.generateBill(cashierUser._id.toString(), {
-      order: order._id.toString(),
-      tax: 10, // 10% tax
-      discount: 5.0, // $5 discount
+    const bill = await billService.generateBill({
+      orderId: order._id.toString(),
     });
     console.log(`- Bill generated! ID: ${bill._id}`);
-    console.log(`  Subtotal: $${bill.subTotal}`);
-    console.log(`  Tax (10%): $${bill.tax} (Expected: $${(42.97 * 0.1).toFixed(2)})`);
-    console.log(`  Discount: $${bill.discount}`);
-    console.log(`  Total Amount: $${bill.totalAmount} (Expected: $${(42.97 + 4.3 - 5.0).toFixed(2)})`);
-    console.log(`  Bill payment status: ${bill.paymentStatus} (Expected: pending)`);
+    console.log(`  Amount: $${bill.amount}`);
+    console.log(`  Bill payment status: ${bill.paymentStatus} (Expected: Pending)`);
 
     // 9. Pay Bill
     console.log('\nStep 7: Recording Payment...');
-    const paidBill = await billService.payBill(bill._id.toString(), 'card');
+    const paidBill = await billService.payBill(bill._id.toString(), 'Card');
     console.log(`- Payment processed via: ${paidBill.paymentMethod}`);
-    console.log(`  Bill status: ${paidBill.paymentStatus} (Expected: paid)`);
+    console.log(`  Bill status: ${paidBill.paymentStatus} (Expected: Paid)`);
 
     // Verify side effects
     const orderPostPay = await orderService.getOrderById(order._id.toString());

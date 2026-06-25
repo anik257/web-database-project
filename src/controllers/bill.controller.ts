@@ -8,9 +8,7 @@ import * as billService from '../services/bill.service';
  * @access  Private/Staff
  */
 export const create = asyncHandler(async (req: Request, res: Response) => {
-  // Safe cast because protect guarantees req.user is set
-  const cashierId = req.user!._id.toString();
-  const bill = await billService.generateBill(cashierId, req.body);
+  const bill = await billService.generateBill(req.body);
   res.status(201).json({
     success: true,
     message: 'Bill generated successfully',
