@@ -3,8 +3,9 @@ import { ApiError } from '../utils/api-error';
 import logger from '../utils/logger';
 
 /**
- * Express global error handling middleware.
- * Catches errors, formats response, and sanitizes production logs/messages.
+ * Centralized global Express error handler middleware.
+ * Intercepts Mongoose, Zod, JWT, Parsing, and Custom API errors.
+ * Sanitizes stack trace outputs in production.
  */
 export const errorHandler = (
   err: any,
@@ -16,54 +17,80 @@ export const errorHandler = (
   let error = { ...err };
   error.message = err.message;
 
-  // Log error stack trace or message
-  logger.error(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
-  if (err.stack) {
-    logger.debug(err.stack);
+  // Log errors based on severity
+  const statusCode = err.statusCode || 500;
+  if (statusCode < 500) {
+    logger.warn(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+  } else {
+    logger.error(`${err.message} - ${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+    if (err.stack) {
+      logger.debug(err.stack);
+    }
   }
 
-  // Handle Mongoose Cast Error (Invalid ID format)
+  // 1. Express Body Parser JSON Syntax Error
+  if (
+    err instanceof SyntaxError &&
+    'status' in err &&
+    (err as any).status === 400 &&
+    'body' in err
+  ) {
+    error = ApiError.badRequest(`Malformed JSON body payload: ${err.message}`);
+  }
+
+  // 2. Mongoose Cast Error (Invalid Hex IDs)
   if (err.name === 'CastError') {
-    const message = `Resource not found with id of ${err.value}`;
+    const message = `Resource not found with invalid format of path '${err.path}' and value '${err.value}'`;
     error = ApiError.notFound(message);
   }
 
-  // Handle Mongoose Duplicate Key Error
+  // 3. Mongoose Duplicate Key Error (MongoDB Code 11000)
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue || {}).join(', ');
-    const message = `Duplicate value entered for field(s): ${field}. Please use another value.`;
+    const fields = Object.keys(err.keyValue || {}).join(', ');
+    const values = Object.values(err.keyValue || {}).join(', ');
+    const message = `Duplicate entry for field(s) '${fields}' with value(s) '${values}'. Please use unique values.`;
     error = ApiError.badRequest(message);
   }
 
-  // Handle Mongoose Validation Error
+  // 4. Mongoose validation errors
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors || {}).map((val: any) => val.message);
     error = ApiError.badRequest('Validation Failed', errors);
   }
 
-  // Handle JWT Malformed Error
+  // 5. Zod schema validation errors (fallback handler)
+  if (err.name === 'ZodError' || err.constructor?.name === 'ZodError') {
+    const errors = (err.issues || []).map(
+      (issue: any) => `${issue.path.join('.')}: ${issue.message}`
+    );
+    error = ApiError.badRequest('Validation Failed', errors);
+  }
+
+  // 6. JWT Invalid format error
   if (err.name === 'JsonWebTokenError') {
     error = ApiError.unauthorized('Invalid security token. Please log in again.');
   }
 
-  // Handle JWT Expired Error
+  // 7. JWT Expired token error
   if (err.name === 'TokenExpiredError') {
     error = ApiError.unauthorized('Your security token has expired. Please log in again.');
   }
 
-  // Fallback to standard ApiError if not already one
-  const statusCode = error.statusCode || 500;
+  // Resolve status definitions and formats
+  const finalStatusCode = error.statusCode || 500;
+  const status = error.status || (finalStatusCode >= 500 ? 'error' : 'fail');
   const isProd = process.env.NODE_ENV === 'production';
 
-  // For unhandled non-operational errors (bugs, db failures), return generic message in production
+  // Sanitize 500 errors in production to avoid leaking database/infrastructure schemas
   let responseMessage = error.message;
-  if (!error.isOperational && isProd && statusCode === 500) {
+  if (!error.isOperational && isProd && finalStatusCode === 500) {
     responseMessage = 'Something went wrong on the server';
   }
 
-  res.status(statusCode).json({
+  res.status(finalStatusCode).json({
     success: false,
-    status: statusCode,
+    status,
+    statusCode: finalStatusCode,
     message: responseMessage,
     errors: error.errors || undefined,
     stack: isProd ? undefined : err.stack,

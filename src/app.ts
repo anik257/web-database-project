@@ -1,4 +1,4 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -6,7 +6,7 @@ import logger from './utils/logger';
 import apiRouter from './routes';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares/error.middleware';
-import { ApiError } from './utils/api-error';
+import { notFoundHandler } from './middlewares/not-found.middleware';
 
 // Initialize express app
 const app: Application = express();
@@ -39,9 +39,7 @@ app.use('/api', apiRouter);
 app.use('/api/auth', authRoutes);
 
 // Fallback route for unmatched endpoints (404 Not Found)
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  next(ApiError.notFound(`Requested route not found: ${req.method} ${req.originalUrl}`));
-});
+app.use(notFoundHandler);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);
