@@ -1,0 +1,1292 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Restaurant Management System API",
+    "version": "1.0.0",
+    "description": "Production-ready backend API documentation for Restaurant Management System. Built using Node.js, Express, MongoDB, and TypeScript."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token in the format: Bearer <token>"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f11" },
+          "name": { "type": "string", "example": "David Waiter" },
+          "email": { "type": "string", "format": "email", "example": "david@restaurant.com" },
+          "password": { "type": "string", "format": "password", "example": "password123" },
+          "phoneNumber": { "type": "string", "example": "+15550101" },
+          "role": { "type": "string", "enum": ["admin", "manager", "staff", "customer"], "example": "staff" },
+          "isActive": { "type": "boolean", "example": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f22" },
+          "name": { "type": "string", "example": "Appetizers" },
+          "description": { "type": "string", "example": "Tasty starters to kick off your meal" },
+          "isActive": { "type": "boolean", "example": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MenuItem": {
+        "type": "object",
+        "required": ["name", "price", "category"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f33" },
+          "name": { "type": "string", "example": "Spring Rolls" },
+          "description": { "type": "string", "example": "Crispy vegetable spring rolls with sweet chili sauce" },
+          "price": { "type": "number", "minimum": 0, "example": 8.99 },
+          "category": { "type": "string", "example": "667cfc12b1d3a436cc550f22", "description": "Category ID reference" },
+          "availability": { "type": "boolean", "example": true },
+          "image": { "type": "string", "example": "http://example.com/rolls.jpg" },
+          "preparationTime": { "type": "integer", "minimum": 1, "maximum": 180, "example": 10 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Table": {
+        "type": "object",
+        "required": ["tableNumber", "capacity"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f44" },
+          "tableNumber": { "type": "integer", "minimum": 1, "example": 5 },
+          "capacity": { "type": "integer", "minimum": 1, "maximum": 20, "example": 4 },
+          "status": { "type": "string", "enum": ["available", "occupied", "reserved"], "example": "available" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": ["foodId", "quantity", "price", "subtotal"],
+        "properties": {
+          "foodId": { "type": "string", "example": "667cfc12b1d3a436cc550f33" },
+          "quantity": { "type": "integer", "minimum": 1, "example": 2 },
+          "price": { "type": "number", "example": 8.99 },
+          "subtotal": { "type": "number", "example": 17.98 },
+          "notes": { "type": "string", "example": "Extra sweet chili sauce" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": ["tableId", "staffId", "items", "totalAmount"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f55" },
+          "tableId": { "type": "string", "example": "667cfc12b1d3a436cc550f44" },
+          "staffId": { "type": "string", "example": "667cfc12b1d3a436cc550f66" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderItem" }
+          },
+          "status": { "type": "string", "enum": ["Pending", "Preparing", "Ready", "Served", "Paid", "Cancelled"], "example": "Pending" },
+          "totalAmount": { "type": "number", "example": 42.97 },
+          "specialInstructions": { "type": "string", "example": "Serve starters first." },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Staff": {
+        "type": "object",
+        "required": ["name", "phone", "position", "salary"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f66" },
+          "name": { "type": "string", "example": "David Waiter" },
+          "phone": { "type": "string", "example": "+15550101" },
+          "position": { "type": "string", "enum": ["Manager", "Waiter", "Chef", "Cashier"], "example": "Waiter" },
+          "salary": { "type": "number", "example": 2800 },
+          "joiningDate": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Bill": {
+        "type": "object",
+        "required": ["orderId", "amount"],
+        "properties": {
+          "_id": { "type": "string", "example": "667cfc12b1d3a436cc550f77" },
+          "orderId": { "type": "string", "example": "667cfc12b1d3a436cc550f55" },
+          "amount": { "type": "number", "example": 42.97 },
+          "paymentMethod": { "type": "string", "enum": ["Cash", "Card", "Mobile Banking", "Unpaid"], "example": "Unpaid" },
+          "paymentStatus": { "type": "string", "enum": ["Pending", "Paid"], "example": "Pending" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "status": { "type": "string", "example": "fail" },
+          "statusCode": { "type": "integer", "example": 400 },
+          "message": { "type": "string", "example": "Validation Failed" },
+          "errors": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["body.email: Please provide a valid email address"]
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user account",
+        "description": "Registers a new user. Role defaults to 'customer' if not specified.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "David Waiter" },
+                  "email": { "type": "string", "format": "email", "example": "david@restaurant.com" },
+                  "password": { "type": "string", "minLength": 6, "example": "password123" },
+                  "phoneNumber": { "type": "string", "example": "+15550101" },
+                  "role": { "type": "string", "enum": ["admin", "manager", "staff", "customer"], "example": "staff" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "User registered successfully" },
+                    "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure / email already exists",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login and retrieve authentication JWT token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "david@restaurant.com" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Login successful" },
+                    "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Categories"],
+        "summary": "List all food categories",
+        "parameters": [
+          { "name": "active", "in": "query", "description": "Filter by active state", "required": false, "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 2 },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Categories"],
+        "summary": "Create a new category (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "example": "Appetizers" },
+                  "description": { "type": "string", "example": "Tasty starters to kick off your meal" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Category" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation fail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "403": { "description": "Admin access required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Categories"],
+        "summary": "Get category details by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f22" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Category" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Category not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      },
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Categories"],
+        "summary": "Update category details (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f22" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Appetizers & Starters" },
+                  "description": { "type": "string", "example": "Hot starters and snacks" },
+                  "isActive": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Category" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Category not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Categories"],
+        "summary": "Delete category (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f22" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Category deleted successfully" }
+                  }
+                }
+              }
+            }
+          },
+          "444": { "description": "Category not found" }
+        }
+      }
+    },
+    "/api/menu": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Menu Items"],
+        "summary": "List menu items with filters and pagination",
+        "parameters": [
+          { "name": "search", "in": "query", "description": "Filter by item name", "required": false, "schema": { "type": "string" } },
+          { "name": "category", "in": "query", "description": "Filter by Category ID", "required": false, "schema": { "type": "string" } },
+          { "name": "availability", "in": "query", "description": "Filter by availability", "required": false, "schema": { "type": "boolean" } },
+          { "name": "page", "in": "query", "description": "Page index", "required": false, "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "description": "Items per page", "required": false, "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of menu items retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 1 },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": { "type": "integer", "example": 1 },
+                        "limit": { "type": "integer", "example": 10 },
+                        "totalPages": { "type": "integer", "example": 1 },
+                        "totalCount": { "type": "integer", "example": 1 }
+                      }
+                    },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/MenuItem" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Menu Items"],
+        "summary": "Create a new menu item (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "price", "category"],
+                "properties": {
+                  "name": { "type": "string", "example": "Spring Rolls" },
+                  "description": { "type": "string", "example": "Crispy vegetable spring rolls" },
+                  "price": { "type": "number", "example": 8.99 },
+                  "category": { "type": "string", "example": "667cfc12b1d3a436cc550f22" },
+                  "preparationTime": { "type": "integer", "example": 10 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Menu item created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/MenuItem" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/menu/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Menu Items"],
+        "summary": "Get menu item by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f33" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Menu item retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/MenuItem" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Menu Items"],
+        "summary": "Update menu item details (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f33" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "Spring Rolls Extra" },
+                  "price": { "type": "number", "example": 9.99 },
+                  "availability": { "type": "boolean", "example": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Menu item updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/MenuItem" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Menu Items"],
+        "summary": "Delete menu item (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f33" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Menu item deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Menu item deleted successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tables": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Tables"],
+        "summary": "List all physical tables",
+        "parameters": [
+          { "name": "status", "in": "query", "description": "Filter by table status", "required": false, "schema": { "type": "string", "enum": ["available", "occupied", "reserved"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tables retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 1 },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Table" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Tables"],
+        "summary": "Create a new table (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tableNumber", "capacity"],
+                "properties": {
+                  "tableNumber": { "type": "integer", "example": 5 },
+                  "capacity": { "type": "integer", "example": 4 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Table created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Table" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tables/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Tables"],
+        "summary": "Get table by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f44" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Table" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Tables"],
+        "summary": "Update table status or configuration",
+        "description": "Staff can update only status; Admins can update all details.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f44" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "capacity": { "type": "integer", "example": 6 },
+                  "status": { "type": "string", "enum": ["available", "occupied", "reserved"], "example": "reserved" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Table details updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Table" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Tables"],
+        "summary": "Delete table (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f44" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Table deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Table deleted successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Staff Profile"],
+        "summary": "List all staff profiles (Admin only)",
+        "parameters": [
+          { "name": "position", "in": "query", "description": "Filter by job position", "required": false, "schema": { "type": "string", "enum": ["Manager", "Waiter", "Chef", "Cashier"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of staff profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 2 },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Staff" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Staff Profile"],
+        "summary": "Create staff profile (Admin only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "phone", "position", "salary"],
+                "properties": {
+                  "name": { "type": "string", "example": "David Waiter" },
+                  "phone": { "type": "string", "example": "+15550101" },
+                  "position": { "type": "string", "enum": ["Manager", "Waiter", "Chef", "Cashier"], "example": "Waiter" },
+                  "salary": { "type": "number", "example": 2800 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Staff profile created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Staff" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/staff/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Staff Profile"],
+        "summary": "Get staff profile details by ID (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f66" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff profile details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Staff" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Staff Profile"],
+        "summary": "Update staff details (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f66" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "David Waiter Jr." },
+                  "salary": { "type": "number", "example": 2900 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Staff" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Staff Profile"],
+        "summary": "Remove staff profile (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f66" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff profile deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Staff profile deleted successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Orders"],
+        "summary": "List all orders",
+        "parameters": [
+          { "name": "status", "in": "query", "description": "Filter by order status", "required": false, "schema": { "type": "string", "enum": ["Pending", "Preparing", "Ready", "Served", "Paid", "Cancelled"] } },
+          { "name": "tableId", "in": "query", "description": "Filter by Table ID", "required": false, "schema": { "type": "string" } },
+          { "name": "staffId", "in": "query", "description": "Filter by Staff ID", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 1 },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Orders"],
+        "summary": "Place a new order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tableId", "staffId", "items"],
+                "properties": {
+                  "tableId": { "type": "string", "example": "667cfc12b1d3a436cc550f44" },
+                  "staffId": { "type": "string", "example": "667cfc12b1d3a436cc550f66" },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["foodId", "quantity"],
+                      "properties": {
+                        "foodId": { "type": "string", "example": "667cfc12b1d3a436cc550f33" },
+                        "quantity": { "type": "integer", "example": 2 },
+                        "notes": { "type": "string", "example": "Extra sweet chili sauce" }
+                      }
+                    }
+                  },
+                  "specialInstructions": { "type": "string", "example": "Serve starters first." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Orders"],
+        "summary": "Get order details by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f55" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Orders"],
+        "summary": "Update order status or items list",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f55" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["Pending", "Preparing", "Ready", "Served", "Paid", "Cancelled"], "example": "Preparing" },
+                  "specialInstructions": { "type": "string", "example": "Keep it hot." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Orders"],
+        "summary": "Delete/cancel an order (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f55" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Order deleted successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bills": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Billing"],
+        "summary": "List all bills",
+        "parameters": [
+          { "name": "paymentStatus", "in": "query", "description": "Filter by payment status", "required": false, "schema": { "type": "string", "enum": ["Pending", "Paid"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of bills",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "count": { "type": "integer", "example": 1 },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Billing"],
+        "summary": "Generate a bill for an Order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderId"],
+                "properties": {
+                  "orderId": { "type": "string", "example": "667cfc12b1d3a436cc550f55" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bill generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Bill" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bills/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Billing"],
+        "summary": "Get bill details by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f77" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bill details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Bill" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Billing"],
+        "summary": "Void/delete a bill (Admin only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f77" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bill deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Bill deleted successfully" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bills/{id}/pay": {
+      "put": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Billing"],
+        "summary": "Process payment for a bill",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "667cfc12b1d3a436cc550f77" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentMethod"],
+                "properties": {
+                  "paymentMethod": { "type": "string", "enum": ["Cash", "Card", "Mobile Banking"], "example": "Card" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bill marked as Paid, related Table released",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Payment recorded successfully" },
+                    "data": { "$ref": "#/components/schemas/Bill" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Dashboard"],
+        "summary": "Get overall dashboard stats summary",
+        "responses": {
+          "200": {
+            "description": "Dashboard statistics summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalOrders": { "type": "integer", "example": 250 },
+                        "todayOrders": { "type": "integer", "example": 15 },
+                        "todayRevenue": { "type": "number", "example": 648.5 },
+                        "availableTables": { "type": "integer", "example": 8 },
+                        "totalStaff": { "type": "integer", "example": 12 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/revenue": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Dashboard"],
+        "summary": "Get monthly revenue data for charts",
+        "responses": {
+          "200": {
+            "description": "Monthly revenue chart data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": { "type": "string", "example": "June 2026" },
+                          "revenue": { "type": "number", "example": 12543.2 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/top-foods": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Dashboard"],
+        "summary": "Get list of top-selling food items",
+        "responses": {
+          "200": {
+            "description": "Top-selling foods dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "foodId": { "type": "string", "example": "667cfc12b1d3a436cc550f33" },
+                          "name": { "type": "string", "example": "Spring Rolls" },
+                          "price": { "type": "number", "example": 8.99 },
+                          "totalQuantity": { "type": "integer", "example": 85 },
+                          "totalRevenue": { "type": "number", "example": 764.15 },
+                          "orderCount": { "type": "integer", "example": 72 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

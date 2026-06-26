@@ -7,6 +7,8 @@ import apiRouter from './routes';
 import authRoutes from './routes/auth.routes';
 import { errorHandler } from './middlewares/error.middleware';
 import { notFoundHandler } from './middlewares/not-found.middleware';
+import swaggerUi from 'swagger-ui-express';
+import swaggerDocument from './config/swagger.json';
 
 // Initialize express app
 const app: Application = express();
@@ -33,6 +35,9 @@ const morganMiddleware = morgan(
   }
 );
 app.use(morganMiddleware);
+
+// API Documentation (Swagger)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // API routes
 app.use('/api', apiRouter);
