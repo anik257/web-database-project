@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import * as staffController from '../controllers/staff.controller';
 import { protect, adminOnly } from '../middlewares/auth.middleware';
+import { validateRequest } from '../middlewares/validate.middleware';
+import {
+  createStaffBodySchema,
+  updateStaffBodySchema,
+  idParamSchema,
+} from '../utils/validation.schemas';
 
 const router = Router();
 
@@ -9,13 +15,13 @@ router.use(protect, adminOnly);
 
 router
   .route('/')
-  .post(staffController.create)
+  .post(validateRequest({ body: createStaffBodySchema }), staffController.create)
   .get(staffController.getAll);
 
 router
   .route('/:id')
-  .get(staffController.getById)
-  .put(staffController.update)
-  .delete(staffController.remove);
+  .get(validateRequest({ params: idParamSchema }), staffController.getById)
+  .put(validateRequest({ params: idParamSchema, body: updateStaffBodySchema }), staffController.update)
+  .delete(validateRequest({ params: idParamSchema }), staffController.remove);
 
 export default router;

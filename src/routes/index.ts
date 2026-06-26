@@ -6,6 +6,7 @@ import tableRoutes from './table.routes';
 import orderRoutes from './order.routes';
 import staffRoutes from './staff.routes';
 import billRoutes from './bill.routes';
+import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get('/health', (_req, res) => {
 });
 
 /**
- * Resource Routes (mounted under /api/v1)
+ * Resource Routes (mounted under /api)
  */
 router.use('/categories', categoryRoutes);
 router.use('/menu', menuItemRoutes);
@@ -29,6 +30,7 @@ router.use('/tables', tableRoutes);
 router.use('/orders', orderRoutes);
 router.use('/staff', staffRoutes);
 router.use('/bills', billRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 /**
  * Example: Admin-only route.
